@@ -2,6 +2,7 @@ import torch
 from torchtext import data
 import numpy as np
 from pbase import app
+from pbase import algorithm
 from model import Parser
 
 class Args(app.ArgParser):
@@ -17,9 +18,6 @@ class Args(app.ArgParser):
         self.parser.add_argument('--vector_cache', type=str, default='data/glove.100d.conll09.pt')
         self.parser.add_argument('--lr', type=float, default='2e-3')
 
-    def get_args(self):
-        self.args = self.parser.parse_args(args=[])
-        return self.args
 
 
 arg_parser = Args()
@@ -28,7 +26,7 @@ args = arg_parser.get_args()
 WORD = data.Field(batch_first=True)
 PLEMMA = data.Field(batch_first=True)
 PPOS = data.Field(batch_first=True)
-DEP = data.Field(batch_first=True, use_vocab=False)
+DEP = data.Field(batch_first=True, use_vocab=False, preprocessing=lambda x: [int(y) for y in x], pad_token=-1)
 LABEL = data.Field(batch_first=True)
 fields = [('WORD', WORD), ('PLEMMA', PLEMMA), ('PPOS', PPOS), ('DEP', DEP), ('LABEL', LABEL)]
 include_test = [False, False, False, False, False]
@@ -75,13 +73,67 @@ class criterion:
     def __init__(self):
         self.crit = torch.nn.CrossEntropyLoss()
 
-    def __call__(self, output, label):
+    def __call__(self, output, batch):
         # return loss
         #return self.crit(output, batch.LABEL)
-        return self.crit(output, label)
+        size0 = output[0].size()[-1]
+        arc_prob = output[0].view(-1, size0)
+        print(output[1][:,1:,:,:].size())
+        print(batch.DEP[:,1:].unsqueeze(2).unsqueeze(3).size())
+        batch_size = output[1].size(0)
+        temp = torch.index_select(output[1][0, 1:, :, :], 0, batch.DEP[0, 1:])
+        print("TEMP", temp.size())
+        label_prob = torch.stack( [torch.index_select(output[1][i,1:,:,:], 1, batch.DEP[i,1:]) for i in range(batch_size)])
+        print(label_prob.size())
+        return self.crit(arc_prob, batch.DEP.view(-1), ignore_index=-1) \
+               + self.crit(label_prob, batch.LABEL[:,1:].view(-1))
 
-def evaluator(name):
-    pass
+def evaluator(name, pairs):
+    #word = batch.WORD.cpu().data.numpy()[0]
+    #prob = arc_prob.cpu().data.numpy()[0][:,:,0]
+    #mask = np.not_equal(word, 1).astype(int)
+    #sent_len= sum(mask)
+    arc_right = 0
+    label_right = 0
+    total = 0
+    if type(pairs) != list and type(pairs) == tuple:
+        pairs = [pairs]
+    for pair in pairs: # pair = (batch_output, batch_examples) batch_output = (arc_prob, rel_prob)
+        for arc_prob, label_prob, example, depen, label in zip(pair[0][0].cpu().data.numpy(),
+                                                 pair[0][1].cpu().data.numpy(),
+                                                 pair[1].WORD.cpu().data.numpy(),
+                                                 pair[1].DEP.cpu().data.numpy(),
+                                                 pair[1].LABEL.cpu().data.numpy()):
+            # output and example is one sentence
+            print("ARC prob",arc_prob.shape)
+            print("LABEL prob",label_prob.shape)
+            print(example)
+            print(depen)
+            print(label)
+            arc_prob = arc_prob[:,:,0]
+            print("ARC prob", arc_prob.shape)
+            word = example
+            mask = np.not_equal(word, 1).astype(int)
+            sent_len = sum(mask)
+            true_arc = depen
+            true_label = label
+            arc_pred = algorithm.MaxSpanningTree(arc_prob, sent_len, mask)
+            print(arc_pred)
+            if name == 'train':
+                arc_pred_for_label = true_arc
+            else:
+                arc_pred_for_label = arc_pred
+            label_prob = label_prob[np.arange(len(arc_pred)), arc_pred]
+            print("LABEL prob", label_prob.shape)
+            label_pred = algorithm.rel_argmax(label_prob, sent_len, ROOT=LABEL.vocab.stoi["ROOT"])
+            arc_comp = np.equal(arc_pred[1:sent_len], true_arc[1:sent_len])
+            label_comp = np.equal(label_pred[1:sent_len], true_label[1:sent_len])
+            total += sent_len -1
+    return (arc_right/total,  label_right/total)
+
+
+
+
 
 # The evaluator output is the input of metrics_comparison
 # Used in parameters selection
@@ -94,14 +146,16 @@ def metrics_comparison(new_metrics, best_metrics):
 # The evaluator output is the input of log_printer
 def log_printer(name,  metrics,epoch=None, iters=None):
     if name == 'train':
-        print(name,epoch,iters, metrics[0])
+        print(name, "EPOCH : ", epoch, "ITER : ", iters,"UAS : ", metrics[0], "LAS : ", metrics[1])
     else:
-        print(name, metrics)
+        print(name, "UAS : ", metrics[0], "LAS : ", metrics[1])
 
 trainer = Trainer(args=args, fields=fields, include_test=include_test)
 
 trainer.prepare(model=Parser, optimizer=optimizer, criterion=criterion(),
                 evaluator=evaluator, metrics_comparison=metrics_comparison, log_printer=log_printer)
+
+trainer.train()
 
 
 

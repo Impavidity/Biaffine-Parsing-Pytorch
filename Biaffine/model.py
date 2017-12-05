@@ -44,7 +44,7 @@ class Parser(nn.Module):
         # x = (sequence length, batch size, dimension of embedding)
         x_word_embed = self.embed(x.WORD)
         x_pre_embed = self.pre_embed(x.WORD)
-        x_pos_embed = self.pos_embed(x.POS)
+        x_pos_embed = self.pos_embed(x.PPOS)
         x_lexical = torch.cat((x_word_embed + x_pre_embed, x_pos_embed), dim=2)
         outputs, (ht, ct) = self.lstm(x_lexical)
         # output = (sentence_length, batch_size, hidden_size * num_direction)
