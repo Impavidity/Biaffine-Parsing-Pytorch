@@ -12,14 +12,7 @@ class Parser(nn.Module):
         self.pre_embed.weight.requires_grad = False
         self.pos_embed = nn.Embedding(config.pos_num, config.pos_dim)
         # TODO: Set dropout for word embedding
-        # self.lstm = layer.LSTM(
-        #     input_size=config.word_dim + config.pos_dim,
-        #     hidden_size=config.lstm_hidden,
-        #     num_layers=config.num_lstm_layer,
-        #     dropout=config.lstm_dropout,
-        #     bidirectional=True
-        # )
-        self.lstm = nn.LSTM(
+        self.lstm = layer.LSTM(
             input_size=config.word_dim + config.pos_dim,
             hidden_size=config.lstm_hidden,
             num_layers=config.num_lstm_layer,
@@ -27,6 +20,14 @@ class Parser(nn.Module):
             batch_first=True,
             bidirectional=True
         )
+        # self.lstm = nn.LSTM(
+        #     input_size=config.word_dim + config.pos_dim,
+        #     hidden_size=config.lstm_hidden,
+        #     num_layers=config.num_lstm_layer,
+        #     dropout=config.lstm_dropout,
+        #     batch_first=True,
+        #     bidirectional=True
+        # )
         self.mlp_arc_dep = layer.MLP(
             in_features = 2*config.lstm_hidden,
             out_features = config.arc_mlp_size,

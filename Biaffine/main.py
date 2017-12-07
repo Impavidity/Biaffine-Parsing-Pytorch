@@ -21,7 +21,7 @@ class Args(app.ArgParser):
         self.parser.add_argument('--lstm_hidden', type=int, default=400)
         self.parser.add_argument('--num_lstm_layer', type=int, default=3)
         self.parser.add_argument('--lstm_dropout', type=float, default=0.33)
-        self.parser.add_argument('--arc_mlp_size', type=int, default=100)
+        self.parser.add_argument('--arc_mlp_size', type=int, default=500)
         self.parser.add_argument('--rel_mlp_size', type=int, default=100)
         self.parser.add_argument('--vector_cache', type=str, default='data/glove.100d.conll09.pt')
         self.parser.add_argument('--lr', type=float, default='2e-3')
@@ -55,8 +55,8 @@ class Trainer(app.TrainAPP):
 class optimizer:
     def __init__(self, parameter, config):
         self.optim = torch.optim.Adam(parameter, lr = config.lr, betas=(0.9, 0.9), eps=1e-12)
-        #l = lambda epoch: 0.75 ** (epoch // 4)
-        #self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=l)
+        l = lambda epoch: 0.75 ** (epoch // 8)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=l)
         #self.optim = torch.optim.RMSprop(parameter, lr=1e-3)
         #self.optim = torch.optim.SGD(parameter, lr=0.01)
 
@@ -67,9 +67,9 @@ class optimizer:
         self.optim.step()
 
     def schedule(self):
-        #self.scheduler.step()
-        #print("learning rate : ", self.scheduler.get_lr(), self.scheduler.base_lrs)
-        pass
+        self.scheduler.step()
+        print("learning rate : ", self.scheduler.get_lr(), self.scheduler.base_lrs)
+
 
 
 
