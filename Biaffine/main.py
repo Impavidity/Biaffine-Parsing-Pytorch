@@ -21,12 +21,13 @@ class Args(app.ArgParser):
         self.parser.add_argument('--word_dim', type=int, default=100)
         self.parser.add_argument('--pos_dim', type=int, default=100)
         self.parser.add_argument('--lstm_hidden', type=int, default=400)
-        self.parser.add_argument('--num_lstm_layer', type=int, default=3)
+        self.parser.add_argument('--num_lstm_layer', type=int, default=4)
         self.parser.add_argument('--lstm_dropout', type=float, default=0.33)
         self.parser.add_argument('--arc_mlp_size', type=int, default=500)
         self.parser.add_argument('--rel_mlp_size', type=int, default=100)
         self.parser.add_argument('--vector_cache', type=str, default='data/glove.100d.conll09.pt')
         self.parser.add_argument('--lr', type=float, default='2e-3')
+        self.parser.add_argument('--tensorboard', type=str, default='logs')
 
 
 class Trainer(app.TrainAPP):
@@ -138,7 +139,8 @@ def metrics_comparison(new_metrics, best_metrics):
         return True
     return False
 
-log = logger.Logger("logs/")
+
+
 
 # The evaluator output is the input of log_printer
 def log_printer(name,  metrics, loss, epoch=None, iters=None ):
@@ -162,11 +164,8 @@ def log_printer(name,  metrics, loss, epoch=None, iters=None ):
 if __name__=="__main__":
     arg_parser = Args()
     args = arg_parser.get_args()
+    log = logger.Logger(args.tensorboard)
     trainer = Trainer(args=args, fields=fields, include_test=include_test, build_vocab_params=params)
     trainer.prepare(model=Parser, optimizer=optimizer, criterion=criterion(),
                 evaluator=evaluator, metrics_comparison=metrics_comparison, log_printer=log_printer)
     trainer.train()
-
-
-
-

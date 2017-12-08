@@ -43,7 +43,7 @@ def output_parser(name, pairs):
             for token, gdep, glabel, pdep, plabel in zip(word, depen, label, arc_pred, label_pred):
                 if gdep == -1:
                     continue
-                fout.write("{}\t{}\t{}\t{}\t{}\n".format(WORD_DICT[token], gdep, LABEL_DICT[glabel], pdep, LABEL_DICT[plabel]))
+                fout.write("_\t{}\t_\t_\t_\t_\t_\t_\t_\t{}\t_\t{}\n".format(WORD_DICT[token], pdep, LABEL_DICT[plabel]))
             fout.write("\n")
             arc_comp = np.equal(arc_pred[1:sent_len], true_arc[1:sent_len])
             label_comp = np.equal(label_pred[1:sent_len], true_label[1:sent_len]) * arc_comp
