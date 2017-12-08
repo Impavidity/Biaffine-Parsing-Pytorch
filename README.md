@@ -30,6 +30,12 @@ Need more tuning for these models.
     ```text
     python test.py --trained_model saves/name_of_model
     ```
+- Evaluation
+    ```text
+    Convert output to conll format with ConvertToConll.ipynb
+    perl eval.pl -q -b -g results/conll.test -s results/conll.test.pred -o test.scores
+    ```
+    
     
 
 
