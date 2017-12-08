@@ -3,12 +3,12 @@ from pbase import algorithm
 import numpy as np
 import os
 from torchtext import data
-from main import Args, evaluator, log_printer, fields, include_test
+from main import Args, evaluator, log_printer, fields, include_test, params
 
 
 arg_parser = Args()
 args = arg_parser.get_args()
-tester = app.TestAPP(args=args, fields=fields, include_test=include_test)
+tester = app.TestAPP(args=args, fields=fields, include_test=include_test, build_vocab_params=params)
 
 WORD = fields[0][1]
 LABEL = fields[4][1]

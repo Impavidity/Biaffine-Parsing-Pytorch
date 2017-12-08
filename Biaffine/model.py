@@ -11,7 +11,7 @@ class Parser(nn.Module):
         self.pre_embed = nn.Embedding(config.word_num, config.word_dim)
         self.pre_embed.weight.requires_grad = False
         self.pos_embed = nn.Embedding(config.pos_num, config.pos_dim)
-        # TODO: Set dropout for word embedding
+        self.embed_dropout = nn.Dropout(p=0.33)
         self.lstm = layer.LSTM(
             input_size=config.word_dim + config.pos_dim,
             hidden_size=config.lstm_hidden,
@@ -20,14 +20,6 @@ class Parser(nn.Module):
             batch_first=True,
             bidirectional=True
         )
-        # self.lstm = nn.LSTM(
-        #     input_size=config.word_dim + config.pos_dim,
-        #     hidden_size=config.lstm_hidden,
-        #     num_layers=config.num_lstm_layer,
-        #     dropout=config.lstm_dropout,
-        #     batch_first=True,
-        #     bidirectional=True
-        # )
         self.mlp_arc_dep = layer.MLP(
             in_features = 2*config.lstm_hidden,
             out_features = config.arc_mlp_size,
@@ -55,7 +47,7 @@ class Parser(nn.Module):
         x_word_embed = self.embed(x.WORD)
         x_pre_embed = self.pre_embed(x.WORD)
         x_pos_embed = self.pos_embed(x.PPOS)
-        x_lexical = torch.cat((x_word_embed + x_pre_embed, x_pos_embed), dim=2)
+        x_lexical = self.embed_dropout(torch.cat((x_word_embed + x_pre_embed, x_pos_embed), dim=2))
         outputs, (ht, ct) = self.lstm(x_lexical)
         # output = ( batch_size, sentence_length, hidden_size * num_direction)
         # ht = (batch, layer * direction, hidden_dim)

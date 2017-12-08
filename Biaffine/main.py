@@ -3,6 +3,7 @@ from torchtext import data
 import numpy as np
 from pbase import app
 from pbase import algorithm
+from pbase import logger
 from model import Parser
 
 WORD = data.Field(batch_first=True)
@@ -12,6 +13,7 @@ DEP = data.Field(batch_first=True, use_vocab=False, preprocessing=lambda x: [int
 LABEL = data.Field(batch_first=True)
 fields = [('WORD', WORD), ('PLEMMA', PLEMMA), ('PPOS', PPOS), ('DEP', DEP), ('LABEL', LABEL)]
 include_test = [False, False, False, False, False]
+params = [{"min_freq":2},{},{},{},{}]
 
 class Args(app.ArgParser):
     def __init__(self):
@@ -136,22 +138,31 @@ def metrics_comparison(new_metrics, best_metrics):
         return True
     return False
 
+log = logger.Logger("logs/")
 
 # The evaluator output is the input of log_printer
 def log_printer(name,  metrics, loss, epoch=None, iters=None ):
     if name == 'train':
         print("{}\tEPOCH : {}\tITER : {}\tUAS : {}\tLAS : {}\tNearest batch training LOSS : {}".format(
-            name, epoch, iters, metrics[0], metrics[1], loss.data[0]
+            name, epoch, iters, metrics[0], metrics[1], loss
         ))
+        step = int(iters.split('/')[0]) + int(iters.split('/')[1]) * (epoch-1)
+        log.scalar_summary(tag="loss", value=loss, step=step)
     else:
-        print("{}\tUAS : {}\tLAS : {}".format(name, metrics[0], metrics[1]))
+        if loss == None:
+            print("{}\tUAS : {}\tLAS : {}".format(name, metrics[0], metrics[1]))
+        else:
+            print("{}\tUAS : {}\tLAS : {}\t Loss : {}".format(name, metrics[0], metrics[1], loss))
+        if iters != None and epoch != None and loss != None:
+            step = int(iters.split('/')[0]) + int(iters.split('/')[1]) * (epoch - 1)
+            log.scalar_summary(tag="valid_loss", value=loss, step=step)
 
 
 
 if __name__=="__main__":
     arg_parser = Args()
     args = arg_parser.get_args()
-    trainer = Trainer(args=args, fields=fields, include_test=include_test)
+    trainer = Trainer(args=args, fields=fields, include_test=include_test, build_vocab_params=params)
     trainer.prepare(model=Parser, optimizer=optimizer, criterion=criterion(),
                 evaluator=evaluator, metrics_comparison=metrics_comparison, log_printer=log_printer)
     trainer.train()
