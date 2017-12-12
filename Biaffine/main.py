@@ -6,7 +6,7 @@ from pbase import algorithm
 from pbase import logger
 from model import Parser
 
-WORD = data.Field(batch_first=True)
+WORD = data.Field(batch_first=True, lower=True)
 PLEMMA = data.Field(batch_first=True)
 PPOS = data.Field(batch_first=True)
 DEP = data.Field(batch_first=True, use_vocab=False, preprocessing=lambda x: [int(y) for y in x], pad_token=-1)
@@ -21,12 +21,12 @@ class Args(app.ArgParser):
         self.parser.add_argument('--word_dim', type=int, default=100)
         self.parser.add_argument('--pos_dim', type=int, default=100)
         self.parser.add_argument('--lstm_hidden', type=int, default=400)
-        self.parser.add_argument('--num_lstm_layer', type=int, default=4)
+        self.parser.add_argument('--num_lstm_layer', type=int, default=3)
         self.parser.add_argument('--lstm_dropout', type=float, default=0.33)
         self.parser.add_argument('--arc_mlp_size', type=int, default=500)
-        self.parser.add_argument('--rel_mlp_size', type=int, default=100)
+        self.parser.add_argument('--rel_mlp_size', type=int, default=500)
         self.parser.add_argument('--vector_cache', type=str, default='data/glove.100d.conll09.pt')
-        self.parser.add_argument('--lr', type=float, default='2e-3')
+        self.parser.add_argument('--lr', type=float, default='3e-3')
         self.parser.add_argument('--tensorboard', type=str, default='logs')
 
 
