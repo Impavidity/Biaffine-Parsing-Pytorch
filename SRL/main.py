@@ -23,13 +23,13 @@ class Args(app.ArgParser):
         self.parser.add_argument('--pos_dim', type=int, default=100)
         self.parser.add_argument('--lem_dim', type=int, default=100)
         self.parser.add_argument('--srl_dim', type=int, default=100)
-        self.parser.add_argument('--is_verb_dim', type=int, default=1)
+        self.parser.add_argument('--is_verb_dim', type=int, default=10)
         self.parser.add_argument('--lstm_hidden', type=int, default=400)
-        self.parser.add_argument('--num_lstm_layer', type=int, default=3)
+        self.parser.add_argument('--num_lstm_layer', type=int, default=4)
         self.parser.add_argument('--lstm_dropout', type=float, default=0.33)
         self.parser.add_argument('--vector_cache', type=str,
                                  default="/mnt/collections/p8shi/dev/biaffine/Biaffine/data/glove.100d.conll09.pt")
-        self.parser.add_argument('--lr', type=float, default='1e-3')
+        self.parser.add_argument('--lr', type=float, default='2e-3')
         self.parser.add_argument('--tensorboard', type=str, default='logs')
 
 class Trainer(app.TrainAPP):
@@ -40,9 +40,8 @@ class Trainer(app.TrainAPP):
         self.config.lem_num = len(self.PLEMMA.vocab)
         self.config.is_verb_num = len(self.INDICATOR.vocab)
         self.config.srl_num = len(self.SLABEL.vocab)
-        if self.config.cuda:
-            self.config.PAD = WORD.vocab.stoi['<pad>']
-            self.config.ISVERB = INDICATOR.vocab.stoi['1']
+        self.config.PAD = WORD.vocab.stoi['<pad>']
+        self.config.ISVERB = INDICATOR.vocab.stoi['1']
         stoi, vectors, dim = torch.load(self.config.vector_cache)
         match_embedding = 0
         self.WORD.vocab.vectors = torch.Tensor(len(self.WORD.vocab), dim)
