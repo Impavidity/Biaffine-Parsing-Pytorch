@@ -45,7 +45,7 @@ class Trainer(app.TrainAPP):
                 self.WORD.vocab.vectors[i] = vectors[wv_index]
                 match_embedding += 1
             else:
-                self.WORD.vocab.vectors[i] = torch.FloatTensor(self.config.word_dim).uniform_(-0.05, 0.05)
+                self.WORD.vocab.vectors[i] = torch.FloatTensor(self.config.word_dim).uniform_(-0.5, 0.5)
         print("Matching {} out of {}".format(match_embedding, len(self.WORD.vocab)))
 
     def prepare(self, **kwargs):

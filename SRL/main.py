@@ -3,14 +3,17 @@ from torchtext import data
 import numpy as np
 from pbase import app, logger
 from model import SRL
+import os
+
+print(os.getpid())
 
 WORD = data.Field(batch_first=True, lower=True)
-PLEMMA = data.Field(batch_first=True)
+PLEMMA = data.Field(batch_first=True, lower=True)
 PPOS = data.Field(batch_first=True)
 DEP = data.Field(batch_first=True, use_vocab=False, preprocessing=lambda x: [int(y) for y in x], pad_token=-1)
 LABEL = data.Field(batch_first=True)
 INDICATOR = data.Field(batch_first=True)
-SLABEL = data.Field(batch_first=True)
+SLABEL = data.Field(batch_first=True, unk_token=None)
 fields = [('WORD', WORD), ('PLEMMA', PLEMMA), ('PPOS', PPOS), ('DEP', DEP), ('LABEL', LABEL),
           ('INDICATOR', INDICATOR), ('SLABEL', SLABEL)]
 include_test = [False, False, False, False, False, False, False]
@@ -26,10 +29,10 @@ class Args(app.ArgParser):
         self.parser.add_argument('--is_verb_dim', type=int, default=10)
         self.parser.add_argument('--lstm_hidden', type=int, default=400)
         self.parser.add_argument('--num_lstm_layer', type=int, default=4)
-        self.parser.add_argument('--lstm_dropout', type=float, default=0.33)
+        self.parser.add_argument('--lstm_dropout', type=float, default=0.25)
         self.parser.add_argument('--vector_cache', type=str,
                                  default="/mnt/collections/p8shi/dev/biaffine/Biaffine/data/glove.100d.conll09.pt")
-        self.parser.add_argument('--lr', type=float, default='2e-3')
+        self.parser.add_argument('--lr', type=float, default='1e-2')
         self.parser.add_argument('--tensorboard', type=str, default='logs')
 
 class Trainer(app.TrainAPP):
@@ -51,7 +54,7 @@ class Trainer(app.TrainAPP):
                 self.WORD.vocab.vectors[i] = vectors[wv_index]
                 match_embedding += 1
             else:
-                self.WORD.vocab.vectors[i] = torch.FloatTensor(self.config.word_dim).uniform_(-0.05, 0.05)
+                self.WORD.vocab.vectors[i] = torch.FloatTensor(self.config.word_dim).uniform_(-0.5, 0.5)
         print("Matching {} out of {}".format(match_embedding, len(self.WORD.vocab)))
 
     def prepare(self, **kwargs):
@@ -63,8 +66,9 @@ class Trainer(app.TrainAPP):
 
 class optimizer:
     def __init__(self, parameter, config):
-        self.optim = torch.optim.Adam(parameter, lr=config.lr, betas=(0.9, 0.9), eps=1e-12)
-        l = lambda epoch: 0.75 ** (epoch // 8)
+        self.optim = torch.optim.Adam(parameter, lr=config.lr)
+        #self.optim = torch.optim.SGD(parameter, lr=config.lr)
+        l = lambda epoch: 0.75 ** (epoch // 1)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=l)
 
     def zero_grad(self):
@@ -80,7 +84,11 @@ class optimizer:
 
 class criterion:
     def __init__(self):
-        self.crit = torch.nn.CrossEntropyLoss(ignore_index=-1)
+        if args.cuda:
+            weight = torch.FloatTensor([1, 0.5] + [1] * 53).cuda()
+        else:
+            weight = torch.FloatTensor([1, 0.5] + [1] * 53)
+        self.crit = torch.nn.CrossEntropyLoss(weight=weight)
 
     def __call__(self, output, batch):
         return self.crit(output.view(-1, output.size(2)), batch.SLABEL.view(-1, 1)[:,0])

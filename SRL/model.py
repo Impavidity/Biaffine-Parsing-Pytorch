@@ -14,8 +14,8 @@ class SRL(nn.Module):
         self.lem_embed = nn.Embedding(config.lem_num, config.lem_dim)
         self.srl_embed = nn.Embedding(config.srl_num, config.srl_dim)
         self.is_verb_embed = nn.Embedding(config.is_verb_num, config.is_verb_dim)
-        self.embed_dropout = nn.Dropout(p=0.33)
-        self.lstm = layer.LSTM(
+        self.embed_dropout = nn.Dropout(p=0.25)
+        self.lstm = nn.LSTM(
             input_size=config.word_dim + config.pos_dim + config.lem_dim + config.is_verb_dim,
             hidden_size=config.lstm_hidden,
             num_layers=config.num_lstm_layer,
@@ -30,7 +30,7 @@ class SRL(nn.Module):
         self.SRLParaMLP = layer.MLP(in_features=config.srl_dim+config.lem_dim,
                                     out_features=config.lstm_hidden * 4,
                                     activation=nn.ReLU(),
-                                    dropout=0.33)
+                                    dropout=0.25)
 
 
     def forward(self, x):
@@ -47,7 +47,6 @@ class SRL(nn.Module):
         outputs, (ht, ct) = self.lstm(x_lexical)
         # output = (batch_size, sentence_length, hidden_size * num_direction)
         # Pass the is_verb == 1 through config
-        predicate_index = (torch.eq(x.INDICATOR, self.config.ISVERB)).float()
         # predicate_index = (batch_size, sentence_length) -> (batch_size, sentence_length, 1)
         # mul = (batch_size, sentence_length, hidden_size * num_directions)
         # sum = (batch_size, hidden_size * num_directions)
@@ -64,12 +63,11 @@ class SRL(nn.Module):
         role_embed = self.srl_embed(self.srl_range)
         role_embed = torch.cat([role_embed.unsqueeze(dim=0)] * batch_size, dim=0)
         # role_embed = (srl_num, srl_dim)
-        # print(predicate_index)
-        # print(x.WORD)
-        # print((predicate_index * x.WORD.float()).size())
-        predicate_word_id = torch.sum(predicate_index * x.PLEMMA.float(), dim=1).long()
-        predicate_lem = self.lem_embed(predicate_word_id)
+        # predicate_word_id = torch.sum(predicate_index * x.PLEMMA.float(), dim=1).long()
+        # predicate_lem = self.lem_embed(predicate_word_id)
+        predicate_lem = torch.sum(x_lem_embed, dim=1)
         predicate_lem = torch.cat([predicate_lem.unsqueeze(dim=1)] * self.config.srl_num, dim=1)
+        # predicate_lem = (batch_size, srl_num, predicate_dim)
         pre_para = torch.cat([role_embed, predicate_lem], dim=2)
         # pre_para = (batch_size, srl_num, pre_para_dim)
         srl_para = self.SRLParaMLP(pre_para).transpose(1, 2)
