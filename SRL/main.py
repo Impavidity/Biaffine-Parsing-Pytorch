@@ -13,7 +13,7 @@ PPOS = data.Field(batch_first=True)
 DEP = data.Field(batch_first=True, use_vocab=False, preprocessing=lambda x: [int(y) for y in x], pad_token=-1)
 LABEL = data.Field(batch_first=True)
 INDICATOR = data.Field(batch_first=True)
-SLABEL = data.Field(batch_first=True, unk_token=None)
+SLABEL = data.Field(batch_first=True)
 fields = [('WORD', WORD), ('PLEMMA', PLEMMA), ('PPOS', PPOS), ('DEP', DEP), ('LABEL', LABEL),
           ('INDICATOR', INDICATOR), ('SLABEL', SLABEL)]
 include_test = [False, False, False, False, False, False, False]
@@ -84,11 +84,12 @@ class optimizer:
 
 class criterion:
     def __init__(self):
-        if args.cuda:
-            weight = torch.FloatTensor([1, 0.5] + [1] * 53).cuda()
-        else:
-            weight = torch.FloatTensor([1, 0.5] + [1] * 53)
-        self.crit = torch.nn.CrossEntropyLoss(weight=weight)
+        # if args.cuda:
+        #     weight = torch.FloatTensor([1, 0.9] + [1] * 53).cuda()
+        # else:
+        #     weight = torch.FloatTensor([1, 0.9] + [1] * 53)
+        # self.crit = torch.nn.CrossEntropyLoss(weight=weight)
+        self.crit = torch.nn.CrossEntropyLoss()
 
     def __call__(self, output, batch):
         return self.crit(output.view(-1, output.size(2)), batch.SLABEL.view(-1, 1)[:,0])
